@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("NeanderthalDDSController")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+874d86358267f28a716caad2a4d4fcfec6692a0f")]
 [assembly: System.Reflection.AssemblyProductAttribute("NeanderthalDDSController")]
 [assembly: System.Reflection.AssemblyTitleAttribute("NeanderthalDDSController")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

@@ -36,3 +36,4 @@ D:\NeanderthalDDSController\obj\Debug\net8.0-windows\refint\NeanderthalDDSContro
 D:\NeanderthalDDSController\obj\Debug\net8.0-windows\NeanderthalDDSController.pdb
 D:\NeanderthalDDSController\obj\Debug\net8.0-windows\NeanderthalDDSController.genruntimeconfig.cache
 D:\NeanderthalDDSController\obj\Debug\net8.0-windows\ref\NeanderthalDDSController.dll
+D:\NeanderthalDDSController\obj\Debug\net8.0-windows\NeanderthalDDSController.sourcelink.json

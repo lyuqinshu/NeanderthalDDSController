@@ -5,6 +5,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Xml.Linq;
 using Spcm;
 
 namespace NeanderthalDDSController
@@ -19,8 +20,8 @@ namespace NeanderthalDDSController
         short nMin, nMax;
         short[] nData;
         sbyte[] byData;
-        bool isPatternRunning = false;
-        public int patternLength;
+        public bool isPatternRunning = false;
+        public int patternLength = 300;
         StringBuilder sErrorText = new StringBuilder(1024);
 
         private NeanderthalForm ui;
@@ -96,24 +97,20 @@ namespace NeanderthalDDSController
 
         public void startSinglePattern()
         {
-            initializeCard();
 
             if (!isPatternRunning)
             {
                 return;
             }
 
+            initializeCard();
             addPatternToBuffer(patternList);
 
             // Check if all commands are excecuted
-            dwErrorCode = Drv.spcm_dwGetParam_i32(hDevice, Regs.SPC_DDS_QUEUE_CMD_COUNT, out lValue);
-            Console.WriteLine("  Command number in que after writting    : {0}", lValue);
-
             while (checkCommandNum(hDevice) != 0)
             {
                 // Loop until the condition is met.
             }
-
 
             // Wait till sequence ends
             Thread.Sleep(patternLength);
@@ -259,6 +256,7 @@ namespace NeanderthalDDSController
                     length = timeList[i + 1] - timeList[i];
 
                     Drv.spcm_dwSetParam_d64(hDevice, Regs.SPC_DDS_TRG_TIMER, length);
+                    i++;
                 }
 
                 // Ch 0 core 0
@@ -289,21 +287,7 @@ namespace NeanderthalDDSController
 
             }
 
-            //dwErrorCode = Drv.spcm_dwSetParam_d64(hDevice, Regs.SPC_DDS_TRG_TIMER, 1e-7);
-            //dwErrorCode = Drv.spcm_dwSetParam_d64(hDevice, Regs.SPC_DDS_CORE0_FREQ, 1e6 * 100);
-            //dwErrorCode = Drv.spcm_dwSetParam_d64(hDevice, Regs.SPC_DDS_CORE0_AMP, 1.0);
-            //dwErrorCode = Drv.spcm_dwSetParam_d64(hDevice, Regs.SPC_DDS_CORE0_FREQ_SLOPE, 0);
-            //dwErrorCode = Drv.spcm_dwSetParam_d64(hDevice, Regs.SPC_DDS_CORE0_AMP_SLOPE, 0);
-            //dwErrorCode = Drv.spcm_dwSetParam_i32(hDevice, Regs.SPC_DDS_CMD, Regs.SPCM_DDS_CMD_EXEC_AT_TRG);
-
-            //for (int i = 0; i < 11; i++)
-            //{
-            //    Drv.spcm_dwSetParam_d64(hDevice, Regs.SPC_DDS_TRG_TIMER, (i+1)*1e-5);
-            //    Drv.spcm_dwSetParam_d64(hDevice, Regs.SPC_DDS_CORE0_AMP, 0.0 + 0.1 * i); // 100% amplitude
-                    
-            //    Drv.spcm_dwSetParam_d64(hDevice, Regs.SPC_DDS_CORE47_AMP, 0.0 + 0.1 * i); // 100% amplitude
-            //    Drv.spcm_dwSetParam_i32(hDevice, Regs.SPC_DDS_CMD, Regs.SPCM_DDS_CMD_EXEC_AT_TRG);
-            //}
+            
 
             Drv.spcm_dwSetParam_i32(hDevice, Regs.SPC_DDS_CMD, Regs.SPCM_DDS_CMD_WRITE_TO_CARD);
 
@@ -320,6 +304,101 @@ namespace NeanderthalDDSController
         public void close_card()
         {
             Drv.spcm_vClose(hDevice);
+        }
+
+        public static void indexTable(string key, out int row, out int col)
+        {
+            row = -1; col = -1;
+            switch (key)
+            {
+                case "time":
+                    row = 0; col = 0; break;
+
+                case "Ch0Freq":
+                    row = 1; col = 0; break;
+
+                case "Ch1Freq":
+                    row = 1; col = 1; break;
+
+                case "Ch2Freq":
+                    row = 1; col = 2; break;
+
+                case "Ch3Freq":
+                    row = 1; col = 3; break;
+
+                case "Ch0Amp":
+                    row = 2; col = 0; break;
+
+                case "Ch1Amp":
+                    row = 2; col = 1; break;
+
+                case "Ch2Amp":
+                    row = 2; col = 2; break;
+
+                case "Ch3Amp":
+                    row = 2; col = 3; break;
+
+                case "Ch0FreqSlope":
+                    row = 3; col = 0; break;
+
+                case "Ch1FreqSlope":
+                    row = 3; col = 1; break;
+
+                case "Ch2FreqSlope":
+                    row = 3; col = 2; break;
+
+                case "Ch3FreqSlope":
+                    row = 3; col = 3; break;
+
+                case "Ch0AmpSlope":
+                    row = 4; col = 0; break;
+
+                case "Ch1AmpSlope":
+                    row = 4; col = 1; break;
+
+                case "Ch2AmpSlope":
+                    row = 4; col = 2; break;
+
+                case "Ch3AmpSlope":
+                    row = 4; col = 3; break;
+
+                default:
+                    throw new KeyNotFoundException($"Key '{key}' not found in the index table.");
+            }
+        }
+
+        public void UpdatePatternValue(Dictionary<string, List<List<double>>> patternList, string key, int row, int col, double newValue)
+        {
+            try
+            {
+                if (!patternList.ContainsKey(key))
+                    throw new KeyNotFoundException($"Key '{key}' not found in dictionary.");
+
+                if (row < 0 || row >= patternList[key].Count || col < 0 || col >= patternList[key][row].Count)
+                    throw new ArgumentOutOfRangeException("Row or column index is out of range.");
+
+                patternList[key][row][col] = newValue;
+                //MessageBox.Show($"Updated [{key}][{row}][{col}] to {newValue}", "Update Successful", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                MessageBox.Show(ex.Message, "Error: Key Not Found", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            catch (ArgumentOutOfRangeException ex)
+            {
+                MessageBox.Show(ex.Message, "Error: Index Out of Range", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Unexpected error: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        public void varySingleParameter(string parName, string key, double val)
+        {
+            int row; int col;
+            indexTable(key, out row, out col); 
+            UpdatePatternValue(patternList, key, row, col, val);
         }
 
 

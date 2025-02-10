@@ -1,4 +1,6 @@
 using System.Windows.Forms;
+using System;
+using System.IO;
 using System.Xml.Serialization;
 
 namespace NeanderthalDDSController
@@ -125,6 +127,23 @@ namespace NeanderthalDDSController
             controller.addParToPatternList(eventName, timeDelay, freqs, amps, freq_slopes, amp_slpoes);
 
             updatePatternList();
+            updatePatternIndicator();
+        }
+
+        public void updatePatternIndicator()
+        {
+            bool isRunning = controller.isPatternRunning;
+            if (isRunning)
+            {
+                labelRunIndicator.Text = "Pattern Running";
+                labelRunIndicator.ForeColor = Color.Green;
+            }
+
+            else
+            {
+                labelRunIndicator.Text = "Pattern Stopped";
+                labelRunIndicator.ForeColor = Color.Red;
+            }
         }
 
         private void button_Delete_Click(object sender, EventArgs e)
@@ -185,11 +204,13 @@ namespace NeanderthalDDSController
         private void button_start_pattern_clicked(object sender, EventArgs e)
         {
             controller.startRepetitivePattern();
+            updatePatternIndicator();
         }
 
         private void button_stop_pattern_clicked(object sender, EventArgs e)
         {
             controller.stopPattern();
+            updatePatternIndicator();
         }
 
         private void textBox_pattern_length_changed(object sender, EventArgs e)
@@ -201,6 +222,116 @@ namespace NeanderthalDDSController
             else
             {
                 controller.patternLength = 300;
+            }
+        }
+
+        private void save_pattern_clicked(object sender, EventArgs e)
+        {
+
+            SaveDataToFile(controller);
+
+        }
+
+        private void load_pattern_clicked(object sender, EventArgs e)
+        {
+            string filename = LoadDataFromFile(controller);
+            updatePatternList();
+            lablePatternName.Text = filename;
+        }
+
+
+
+        public static void SaveDataToFile(Controller controller)
+        {
+            using (SaveFileDialog saveFileDialog = new SaveFileDialog())
+            {
+                saveFileDialog.Filter = "CSV Files (*.csv)|*.csv|All Files (*.*)|*.*";
+                saveFileDialog.Title = "Save Data";
+                saveFileDialog.DefaultExt = "csv";
+                saveFileDialog.AddExtension = true;
+
+                if (saveFileDialog.ShowDialog() == DialogResult.OK)
+                {
+                    string filePath = saveFileDialog.FileName;
+
+                    // Try to delete file if it exists (to free up any locks)
+                    if (File.Exists(filePath))
+                    {
+                        try
+                        {
+                            File.Delete(filePath); // Delete if not in use
+                        }
+                        catch (IOException)
+                        {
+                            MessageBox.Show("File is currently in use. Close it and try again.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            return;
+                        }
+                    }
+
+                    // Open with FileStream to allow other processes to access it
+                    using (FileStream fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.Read | FileShare.Delete))
+                    using (StreamWriter writer = new StreamWriter(fileStream))
+                    {
+                        foreach (string key in controller.patternList.Keys)
+                        {
+                            object[] item =
+                            {
+                            key, controller.patternList[key][0][0],
+                            controller.patternList[key][1][0], controller.patternList[key][1][1], controller.patternList[key][1][2], controller.patternList[key][1][3],
+                            controller.patternList[key][2][0], controller.patternList[key][2][1], controller.patternList[key][2][2], controller.patternList[key][2][3],
+                            controller.patternList[key][3][0], controller.patternList[key][3][1], controller.patternList[key][3][2], controller.patternList[key][3][3],
+                            controller.patternList[key][4][0], controller.patternList[key][4][1], controller.patternList[key][4][2], controller.patternList[key][4][3]
+                        };
+
+                            writer.WriteLine(string.Join(",", item)); // Write data as CSV
+                        }
+                    }
+
+                    MessageBox.Show("File saved successfully!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+            }
+        }
+
+        public static string LoadDataFromFile(Controller controller)
+        {
+            using (OpenFileDialog openFileDialog = new OpenFileDialog())
+            {
+                openFileDialog.Filter = "CSV Files (*.csv)|*.csv|All Files (*.*)|*.*"; // Set file types
+                openFileDialog.Title = "Open Data File"; // Window title
+
+                if (openFileDialog.ShowDialog() == DialogResult.OK)
+                {
+                    string fileName = openFileDialog.FileName;
+                    using (FileStream fileStream = new FileStream(openFileDialog.FileName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                    using (StreamReader reader = new StreamReader(fileStream))
+                    {
+                        controller.patternList.Clear(); // Clear existing data before loading
+
+                        while (!reader.EndOfStream)
+                        {
+                            string line = reader.ReadLine();
+                            string[] values = line.Split(',');
+
+                            if (values.Length != 18) continue; // Ensure correct format
+
+                            string key = values[0]; // First column is the key
+                            List<List<double>> pattern = new List<List<double>>
+                        {
+                            new List<double> { double.Parse(values[1]) },
+                            new List<double> { double.Parse(values[2]), double.Parse(values[3]), double.Parse(values[4]), double.Parse(values[5]) },
+                            new List<double> { double.Parse(values[6]), double.Parse(values[7]), double.Parse(values[8]), double.Parse(values[9]) },
+                            new List<double> { double.Parse(values[10]), double.Parse(values[11]), double.Parse(values[12]), double.Parse(values[13]) },
+                            new List<double> { double.Parse(values[14]), double.Parse(values[15]), double.Parse(values[16]), double.Parse(values[17]) }
+                        };
+
+                            controller.patternList[key] = pattern;
+                        }
+                    }
+
+                    //MessageBox.Show("File loaded successfully!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return fileName;
+                }
+                return null;
             }
         }
 
@@ -243,6 +374,11 @@ namespace NeanderthalDDSController
         }
 
         private void label12_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void Menu_Opening(object sender, System.ComponentModel.CancelEventArgs e)
         {
 
         }
